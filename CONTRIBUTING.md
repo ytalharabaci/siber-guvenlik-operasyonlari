@@ -25,8 +25,8 @@ Rehbere yeni konular eklemek, kapsamlı içerik yazmak veya yapısal değişikli
 1. GitHub deposunun sağ üst köşesindeki **"Fork"** butonuna tıklayarak projeyi kendi hesabınıza kopyalayın.
 2. Kendi çatalınızı (fork) bilgisayarınıza klonlayın:
    ```bash
-   git clone https://github.com/[KULLANICI-ADINIZ]/Siber-Guvenlik-Rehberi.git
-   cd Siber-Guvenlik-Rehberi
+   git clone https://github.com/[KULLANICI-ADINIZ]/siber-guvenlik-operasyonlari.git
+   cd siber-guvenlik-operasyonlari
    ```
 
 ### 2. Geliştirme Ortamı

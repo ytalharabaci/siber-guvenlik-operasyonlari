@@ -4,6 +4,7 @@
 [![Turkish](https://img.shields.io/badge/Language-Turkish-red.svg)](#)
 [![Contributions Welcome](https://img.shields.io/badge/Contributions-WELCOME-brightgreen.svg?style=for-the-badge)](#-katkıda-bulunma)
 [![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+[![Astro 7](https://img.shields.io/badge/Astro-7.3-orange.svg)](https://astro.build)
 
 > **🎯 Modern siber güvenlik profesyonelleri için kapsamlı, güncel ve tamamen Türkçe topluluk rehberi**
 
@@ -63,7 +64,7 @@ npm install
 npm run dev
 ```
 
-Ardından tarayıcınızda `http://localhost:4321` adresine giderek rehberi anlık olarak görüntüleyebilirsiniz.
+Ardından tarayıcınızda `http://localhost:4321/siber-guvenlik-operasyonlari/` adresine giderek rehberi anlık olarak görüntüleyebilirsiniz.
 
 ---
 
@@ -92,9 +93,9 @@ Bu proje **Creative Commons Attribution 4.0 International (CC BY 4.0)** lisansı
 * 📝 **Tek Koşul:** Orijinal esere atıfta bulunulması gerekmektedir.
 
 ```
-"Kapsamlı Siber Güvenlik El Kitabı" by Yusuf Talha ARABACI 
+"Siber Güvenlik Operasyonları" by Yusuf Talha ARABACI 
 is licensed under CC BY 4.0
-Kaynak: https://github.com/yusufarbc/Siber-Guvenlik-Rehberi
+Kaynak: https://github.com/yusufarbc/siber-guvenlik-operasyonlari
 ```
 
 ---
