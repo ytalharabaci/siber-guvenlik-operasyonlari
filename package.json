@@ -1,6 +1,7 @@
 {
   "name": "siber-guvenlik-operasyonlari",
   "version": "1.0.0",
+  "license": "CC-BY-4.0",
   "type": "module",
   "scripts": {
     "dev": "astro dev",

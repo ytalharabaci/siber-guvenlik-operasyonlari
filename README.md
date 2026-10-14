@@ -88,7 +88,7 @@ Bu rehberin gelişmesi ve güncel kalması siber güvenlik topluluğunun katkıl
 
 ## 📜 Lisans
 
-Bu proje **Creative Commons Attribution 4.0 International (CC BY 4.0)** lisansı altında korunmaktadır.
+Bu proje **Creative Commons Attribution 4.0 International (CC BY 4.0)** lisansı altında korunmaktadır. Lisans metninin tamamı için [LICENSE](LICENSE) dosyasına bakın.
 * ✅ **Serbest Kullanım:** Ticari kullanım, eğitim amaçlı kullanım, uyarlama ve yeniden dağıtım tamamen serbesttir.
 * 📝 **Tek Koşul:** Orijinal esere atıfta bulunulması gerekmektedir.
 
