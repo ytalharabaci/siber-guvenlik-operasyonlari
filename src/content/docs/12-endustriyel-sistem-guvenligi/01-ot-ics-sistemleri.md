@@ -1,0 +1,398 @@
+---
+title: OT/ICS Sistemleri, Purdue Modeli ve Güvenli IT/OT Entegrasyonu
+sidebar:
+  order: 1
+  label: 12.1  OT/ICS Sistemleri, Purdue Modeli ve Güvenli IT/OT Entegrasyonu
+---
+
+# OT/ICS Sistemleri, Purdue Modeli ve Güvenli IT/OT Entegrasyonu
+
+Operasyonel Teknoloji (OT) ve Endüstriyel Kontrol Sistemleri (ICS/EKS), fiziksel dünyayı doğrudan yöneten siber-fiziksel sistemlerdir. SCADA, PLC, RTU, DCS ve Emniyet Enstrümanlı Sistemler (SIS); enerji, su, imalat ve ulaştırma gibi kritik altyapılarda üretim sürekliliğini ve insan güvenliğini sağlar. Bir SOC analisti için temel ayrım şudur: IT'de saldırı veri kaybına yol açarken, OT'de saldırı türbin patlamasına, şebeke kesintisine veya zehirli gaz salımına — yani can kaybına ve fiziksel yıkıma — dönüşebilir.
+
+Bu bölüm; **NIST SP 800-82 Rev. 3** (Mayıs 2023), **IEC 62443** (IACS güvenlik serisi), CIS Controls, ISO/IEC 27001, MITRE ATT&CK for ICS ve Türkiye mevzuatı (KVKK, 5651, BİGR, EPDK) çerçevesinde Purdue segmentasyonu, IT/OT izolasyonu, veri diyotları, endüstriyel protokoller ve güvenli uzaktan erişimi savunma derinliği perspektifinden inceler.
+
+### NIST SP 800-82 Rev. 3 ve IEC 62443: Çerçeve Özeti
+
+NIST SP 800-82 Rev. 3, OT güvenliğini IT güvenliğinden ayıran temel ilkeleri şöyle özetler: **(1)** erişilebilirlik ve emniyet önceliği, **(2)** yama ve değişiklik yönetiminde üretici sertifikasyonu, **(3)** aktif tarama yerine pasif izleme, **(4)** olay müdahalede proses güvenliği kapısı. IEC 62443 ise bu ilkeleri **Zone & Conduit** mimarisi ve **Güvenlik Seviyesi (SL)** modeliyle somutlaştırır.
+
+| Çerçeve | Kapsam | OT'ye Özgü Katkı |
+| :---- | :---- | :---- |
+| **NIST SP 800-82 Rev. 3** | OT/ICS güvenlik rehberi | Segmentasyon, izleme, IR uyarlaması, wireless/remote access |
+| **IEC 62443-3-3** | Sistem güvenlik gereksinimleri (SR) | FR1–FR7 foundational requirements, SL-T 1–4 |
+| **IEC 62443-2-1** | Güvenlik programı yaşam döngüsü | CSMS (Cyber Security Management System) |
+| **IEC 62443-4-2** | Bileşen güvenlik gereksinimleri | PLC/HMI/RTU üretici sertifikasyonu |
+
+**IEC 62443 Temel Gereksinimler (FR) ve Purdue Eşlemesi:**
+
+| FR | Tanım | Purdue Karşılığı | Örnek Kontrol |
+| :---- | :---- | :---- | :---- |
+| **FR1** | Tanımlama ve kimlik doğrulama | Seviye 2–5 | MFA, benzersiz hesaplar, varsayılan parola yasağı |
+| **FR2** | Kullanım kontrolü | Seviye 1–3 | RBAC, engineering station yetki sınırı |
+| **FR3** | Sistem bütünlüğü | Seviye 0–2 | Firmware imza, logic CRC, anti-tamper |
+| **FR4** | Veri gizliliği | Seviye 3–5 | TLS/VPN, Historian şifreleme |
+| **FR5** | Kısıtlı veri akışı | Tüm seviyeler | Zone/conduit, data diode, firewall |
+| **FR6** | Olaylara zamanında yanıt | Seviye 2–3.5 | Pasif IDS, SIEM, OT playbook |
+| **FR7** | Kaynak erişilebilirliği | Seviye 0–1 | Redundancy, DoS koruması, sanal yama |
+
+**Hedef Güvenlik Seviyesi (SL-T) seçimi:** Risk değerlendirmesi sonucu her zone için SL-T 1–4 belirlenir. Enerji santrali BPCS için tipik hedef SL-T 3; yalnızca okuma yapan Historian replikası için SL-T 2 yeterli olabilir. SL-T 4 (yüksek kaynaklı APT) için data diode, 7/24 OT SOC ve yıllık adversary emulation gerekir.
+
+:::note
+NIST SP 800-82 Rev. 3, CISA ve NSA tarafından da referans alınan birincil OT güvenlik rehberidir. IEC 62443 ile birlikte kullanıldığında Purdue katmanları **zone**'lara, katmanlar arası geçişler **conduit**'lere dönüşür; bu, firewall kuralı yazımı ve risk kabul belgelerinin ortak dili haline gelir.
+:::
+
+---
+
+## §12.1.1. OT/ICS Karakteristiği ve CIA Üçgeninin Tersine Dönmesi
+
+Klasik IT güvenliğinde önceliklendirme **Confidentiality > Integrity > Availability** (Gizlilik > Bütünlük > Erişilebilirlik) şeklindedir. Bir bankada müşteri verisinin sızması felakettir; sistemin birkaç dakika yavaşlaması tolere edilebilir.
+
+OT dünyasında hiyerarşi tam tersine döner: **Availability > Integrity > Confidentiality** (AIC). Bir doğal gaz kompresör istasyonunun PLC'si milisaniye hassasiyetinde çalışır; kontrol döngüsü 100 ms gecikirse fiziksel süreç kontrolden çıkabilir. NIST SP 800-82 Rev. 3 bu farkı sonuç-temelli (consequence-based) risk kategorizasyonu olarak tanımlar ve erişilebilirlik etkisini gizlilik/bütünlükten ayrı değerlendirmeyi önerir.
+
+| Boyut | IT Ortamı | OT/ICS Ortamı |
+| :---- | :---- | :---- |
+| **Birincil öncelik** | Gizlilik (C) | Erişilebilirlik (A) ve emniyet (Safety) |
+| **Kesinti toleransı** | Planlı bakım pencereleri kabul edilir | 7/24/365; duruş milyonlarca TL kayıp veya fiziksel risk |
+| **Yama yönetimi** | Aylık Patch Tuesday | Üretici sertifikasyonu + planlı duruş (yılda 1–2 kez) |
+| **Olay müdahalesi** | Enfekte sistem anında izole edilir | İzolasyon operasyon ekibiyle koordine edilmeden verilemez |
+| **Sistem ömrü** | 3–5 yıl | 15–25 yıl (legacy OS, şifrelemesiz protokoller) |
+
+Bu paradigma farkının mimari sonuçları derindir:
+
+- **Yama yönetimi:** IT'de "hemen yama yap"; OT'de "üretimi durdurmadan, üreticinin sertifikasyonunu bekleyerek yama yap."
+- **Antivirüs/EDR:** IT endpoint'inde şüpheli süreç anında sonlandırılır; SCADA sunucusunda aynı agresif müdahale kontrol döngüsünü bozarak tehlikeli proses sapmasına yol açabilir.
+- **Olay müdahalesi:** IT'de enfekte sistem anında izole edilir; OT'de izolasyon kararı operasyon personeliyle koordine edilmeden verilemez.
+
+:::note
+OT güvenlik kontrolleri "önce zarar verme" (first, do no harm) ilkesi etrafında tasarlanmalıdır. Aktif zafiyet taraması (Nmap, Nessus) eski PLC'leri çökertebilir; pasif izleme ve katı segmentasyon birincil savunma hattıdır.
+:::
+
+### IT ve OT Varlık Karşılaştırması
+
+| Bileşen | Rol | Tipik Protokoller | Güvenlik Zafiyeti |
+| :---- | :---- | :---- | :---- |
+| **PLC** | Temel kontrol (Seviye 1) | Modbus, S7comm, EtherNet/IP | Kimlik doğrulama yok, sınırlı CPU |
+| **RTU** | Uzak saha kontrolü | DNP3, IEC-104 | Secure Authentication çoğu sahada kapalı |
+| **HMI/SCADA** | Operatör arayüzü (Seviye 2) | OPC DA/UA, Modbus TCP | Windows tabanlı; IT tehditleri sıçrar |
+| **Historian** | Proses veri arşivi (Seviye 3) | OPC, SQL | Tescilli format; forensik zorluğu |
+| **SIS** | Emniyet kesmesi | Tescilli (TriStation vb.) | BPCS'den bağımsız olmalı (IEC 61511) |
+
+---
+
+## §12.1.2. Purdue Kurumsal Referans Mimarisi (PERA)
+
+Purdue modeli (Purdue Enterprise Reference Architecture, PERA), 1990'larda Theodore J. Williams ve Purdue Üniversitesi konsorsiyumu tarafından bilgisayar-entegre üretim (CIM) veri akışlarını tanımlamak için geliştirildi. ISA-99/IEC 62443 bunu **bölgeler (zones)** ve **kanallar (conduits)** kavramına genişletti.
+
+![Purdue Modeli katmanlı OT/IT mimarisi](./7cab0fd89e5702ac26397b130e3e606f-VPN-blog-image-1-Purdue-Model-1024x786.webp)
+*Purdue Enterprise Reference Architecture — Seviye 0'dan 5'e hiyerarşik segmentasyon*
+
+```mermaid
+flowchart TB
+    L5["Seviye 5 — Kurumsal IT<br/>AD, e-posta, internet"]
+    L4["Seviye 4 — İş lojistiği<br/>ERP, planlama"]
+    L35["Seviye 3.5 — iDMZ<br/>Jump host, patch staging"]
+    L3["Seviye 3 — Saha operasyonları<br/>MES, Historian"]
+    L2["Seviye 2 — Süpervizör<br/>HMI, SCADA, EWS"]
+    L1["Seviye 1 — Temel kontrol<br/>PLC, RTU, IED"]
+    L0["Seviye 0 — Fiziksel süreç<br/>Sensör, aktüatör"]
+    L5 -->|kontrollü| L35
+    L4 -->|kontrollü| L35
+    L35 -->|conduit| L3
+    L3 --> L2
+    L2 --> L1
+    L1 --> L0
+    L5 -.->|yasak: doğrudan atlama| L0
+```
+
+<details>
+<summary>IEC 62443 Zone & Conduit — conduit dokümantasyon şablonu</summary>
+
+Her conduit kaydında şu alanlar zorunludur: **kaynak zone**, **hedef zone**, **izin verilen protokoller** (Modbus TCP 502, S7comm 102 vb.), **yön** (unidirectional/bidirectional), **saat kısıtı** (bakım penceresi), **onaylayan mühendislik birimi**. NIST SP 800-82 Rev. 3 Ek F, bu envanterin olay müdahale sırasında blast radius hesabı için kritik olduğunu vurgular. SL-A < SL-T ise telafi planı veya risk kabul belgesi gereklidir.
+
+</details>
+
+### Katman Tanımları
+
+| Seviye | Bölge | Bileşenler | Birincil Risk |
+| :---- | :---- | :---- | :---- |
+| **Seviye 0** | Fiziksel süreç | Sensörler, aktüatörler, motorlar, valfler | Fiziksel sabotaj, sinyal bozma |
+| **Seviye 1** | Temel kontrol | PLC, RTU, IED | Kimlik doğrulama eksikliği, firmware enjeksiyonu |
+| **Seviye 2** | Süpervizör kontrol | HMI, SCADA, mühendislik iş istasyonları | OS zafiyetleri, USB zararlıları, lateral movement |
+| **Seviye 3** | Saha operasyonları | MES, Historian, alarm sunucuları | IT kaynaklı malware'in OT'ye ilk sızışı |
+| **Seviye 3.5** | Endüstriyel DMZ (iDMZ) | Jump host, proxy, Historian replikası, patch staging | Sınır güvenlik duvarı sızıntıları |
+| **Seviye 4** | İş lojistiği | ERP, üretim planlama, kurumsal DB | Kurumsal kimlik bilgisi çalınması |
+| **Seviye 5** | Kurumsal ağ | İnternet, e-posta, Active Directory | Phishing, fidye yazılımı, dış APT |
+
+**Segmentasyon mantığı:** Veri ve komutlar yalnızca **dikey ve bitişik katmanlar arasında** akmalıdır — Seviye 5'ten doğrudan Seviye 0'a atlamamalıdır. Seviye 3'ten Seviye 4'e Historian verisi (salt okunur) akar; tersi yasaktır.
+
+![Purdue modeli detaylı katman görünümü](./image4-8.webp)
+*Claroty kaynaklı detaylı Purdue diyagramı — hücre/alan zonları ve SIS entegrasyonu*
+
+### IEC 62443 Zone & Conduit Genişletmesi
+
+Purdue katı hiyerarşi sunarken, IEC 62443 bağlama göre uyarlanabilir **Zone & Conduit** modeli getirir:
+
+- **Zone:** Benzer güvenlik gereksinimine, kritikliğe ve sahipliğe sahip varlık grupları (ör. bir üretim hattı PLC'leri, SCADA sunucu çifti)
+- **Conduit:** Zone'lar arası kontrollü iletişim yolları; her conduit'te kaynak/hedef, protokol, port ve yön tanımlanır
+- **Hedef Güvenlik Seviyesi (SL-T 0–4):** Zone başına risk değerlendirmesiyle belirlenir; SL-T, o zone'un karşılaması gereken tehdit kapasitesini ifade eder
+- **Mevcut Güvenlik Seviyesi (SL-A):** Sahada ölçülen gerçek olgunluk; SL-A < SL-T ise telafi planı veya risk kabul belgesi zorunludur
+
+**Zone tasarım örneği (IEC 62443-3-2):**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Zone: Corporate-IT (SL-T 2)     │  Zone: iDMZ (SL-T 3)     │
+│  ERP, AD, e-posta                │  Jump host, patch staging │
+├──────────────────────────────────┼───────────────────────────┤
+│  Conduit: Historian-ReadOnly (OT→IT, tek yön, port 1433)    │
+├─────────────────────────────────────────────────────────────┤
+│  Zone: SCADA-Supervisory (SL-T 3)  │  Zone: Cell-Area (SL-T 4)│
+│  HMI, engineering WS, alarm      │  PLC, RTU, IED            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| SL-T | Tehdit Profili | SR Gereksinim Yoğunluğu | Örnek Kontroller |
+| :---- | :---- | :---- | :---- |
+| **SL 1** | Meraklı, sıradan saldırgan | FR1, FR5 temel | Varsayılan parola değişimi, temel segmentasyon |
+| **SL 2** | Düşük kaynaklı bilinçli saldırgan | FR1–FR3, FR5 | iDMZ, MFA, merkezi loglama |
+| **SL 3** | Orta kaynaklı sistematik saldırgan | FR1–FR6 tam | DPI, pasif IDS, sanal yama, PAM |
+| **SL 4** | Yüksek kaynaklı sofistike saldırgan | FR1–FR7 + sürekli izleme | Data diode, 7/24 OT SOC, yıllık purple team |
+
+**Conduit dokümantasyonu (zorunlu alanlar):** Kaynak zone, hedef zone, izin verilen protokoller (Modbus TCP 502, S7comm 102 vb.), yön (unidirectional/bidirectional), saat kısıtı (bakım penceresi), onaylayan mühendislik birimi. NIST SP 800-82 Rev. 3 Ek F, bu envanterin olay müdahale sırasında blast radius hesabı için kritik olduğunu vurgular.
+
+:::caution
+Modern IIoT ve doğrudan-bulut veri akışı saf Purdue modelini zorlamaktadır. Sektör bunu "Purdue 2.0" olarak adlandırır — model referans çerçeve olarak korunur, Zero Trust mikro-segmentasyon ve kimlik-temelli erişim kontrolleriyle desteklenir. CISA/NCSC-UK ortak OT bağlanabilirlik rehberi (Ocak 2026), OT ortamıyla tüm bağlantıların OT içinden başlatılan giden (outbound) bağlantılar olması gerektiğini açıkça belirtir.
+:::
+
+### Operasyonel Boşluk Riski
+
+Purdue segmentasyonu olmadığında IT ağındaki fidye yazılımı (NotPetya, 2017) yatay olarak OT'ye yayılır. iDMZ ve katmanlar arası firewall'lar saldırının blast radius'unu (etki yarıçapını) sınırlar.
+
+---
+
+## §12.1.3. IT/OT İzolasyonu: Air-Gapping ve Veri Diyotları
+
+**Air-gapping**, OT ağının fiziksel olarak IT/internet bağlantısı olmaması demektir. Stuxnet air-gap'in mutlak güvenlik olmadığını kanıtladı: enfekte USB sürücü hava boşluğunu insan eliyle aştı. IIoT çağında saf air-gap çoğu tesiste sürdürülemez.
+
+**Modern yaklaşım:** iDMZ + Unidirectional Gateway (Veri Diyodu)
+
+Veri diyodu, **donanım seviyesinde tek yönlü** veri akışı sağlar. Fiziksel olarak geri dönüş imkânsızdır: gönderen tarafta optik verici (LED/lazer), alıcı tarafta fotodiyot bulunur; ters yönde verici/alıcı çifti yoktur.
+
+```
+[ Yüksek Güvenlikli Bölge (OT) ]              [ Düşük Güvenlikli Bölge (IT) ]
+ ┌──────────────────────────┐                  ┌──────────────────────────┐
+ │  Kaynak (Historian/SCADA)│                  │   Hedef (SIEM/ERP/BI)    │
+ └────────────┬─────────────┘                  └────────────▲─────────────┘
+              │ TCP Oturumu (Yerel Sonlandırma)              │
+              ▼                                              │
+ ┌──────────────────────────┐                  ┌────────────┴─────────────┐
+ │ Gönderici Vekil Sunucu   │                  │ Alıcı Vekil Sunucu       │
+ └────────────┬─────────────┘                  └────────────▲─────────────┘
+              │         DONANIMSAL VERİ DİYOTU (Optik)     │
+              │  ┌─────────────────┐    Fiber    ┌─────────┴────────┐
+              └──┤ TX (Yalnızca LED)├───────────►│ RX (Yalnızca Sensör)│
+                 └─────────────────┘              └────────────────────┘
+```
+
+**Protokol kırılması (Protocol Break):** TCP/IP çift yönlü ACK gerektirir; data diode geri dönüş hattını kestiği için vekil sunucular TCP oturumunu her iki uçta ayrı sonlandırır ve veriyi UDP veya tescilli tek yönlü formata dönüştürür.
+
+| Özellik | Çift Yönlü Firewall | Donanımsal Veri Diyotu |
+| :---- | :---- | :---- |
+| **Akış yönü** | Yazılımsal kurallarla kısıtlanır | Donanımsal/optik olarak tek yönlü |
+| **Enforcement** | ACL, yazılım algoritmaları | Fizik yasaları (ışık kaynağı/alıcı ayrımı) |
+| **Saldırı yüzeyi** | Hatalı kural, yazılım açığı | Sıfır geri dönüş; IT'den OT'ye trafik imkansız |
+| **Kullanım** | İki yönlü kontrollü geçiş | Historian → SIEM, log → analitik (OT → IT) |
+
+**Kullanım senaryoları:** Historian verisinin kurumsal raporlamaya aktarılması, SIEM'e log gönderimi, nükleer/enerji santrallerinde emniyet bölgelerinin korunması.
+
+:::danger
+Data diode fiziksel erişimi veya içeriden tehdidi (insider) engelleyemez — bütüncül bir programın parçası olmalıdır. Gerçek zamanlı kontrol komutları için uygun değildir; yalnızca izleme/veri çıkışı içindir.
+:::
+
+---
+
+## §12.1.4. Endüstriyel Protokoller: Zafiyetler ve Savunma
+
+Endüstriyel protokoller güvenilirlik ve verimlilik önceliğiyle tasarlanmıştır; siber güvenlik tasarım döneminde öncelik değildi.
+
+### Protokol Zafiyet Matrisi
+
+| Protokol | Port | Kimlik Doğrulama | Şifreleme | Kritik Risk |
+| :---- | :---- | :---- | :---- | :---- |
+| **Modbus TCP** | 502 | Yok | Yok | Herkes coil/register yazabilir (FC 05/06/16) |
+| **DNP3** | 20000 | SA çoğu sahada kapalı | Opsiyonel (SAv6) | CROB ile kesici açma/kapama |
+| **IEC-104** | 2404 | Yok | Yok | Industroyer'ın hedef protokolü |
+| **IEC 61850/GOOSE** | — | Yok | Yok | Milisaniye hassasiyetinde şifrelenmemiş |
+| **S7comm** | 102 | Zayıf | Yok | Program upload/download, Stuxnet vektörü |
+| **OPC UA** | 4840 | Sertifika tabanlı (opsiyonel) | TLS (opsiyonel) | %51+ internete açık sunucu anonim erişime izin veriyor |
+| **Profinet** | EtherType 0x8892 | Yok (DCP) | Yok | Cihaz adı/IP değiştirme, AR koparma |
+
+**2015 Ukrayna elektrik şebekesi saldırısı** somut örnektir: saldırganlar RTU'lara meşru DNP3 komutları göndererek devre kesicileri açtı; protokol kimlik doğrulaması olmadan komutları yerine getirdi.
+
+### Derin Paket İncelemesi (DPI) ve Suricata Kuralları
+
+Standart stateful firewall port 502'deki tüm trafiğe izin verir; yetkili HMI ile saldırganın yazma komutunu ayırt edemez.
+
+```bash
+# Suricata — Yetkisiz Modbus yazma komutlarını engelle
+drop tcp !$ENGINEERING_STATION any -> $PLC_IPS 502 (
+  msg:"OT-DPI: Yetkisiz Modbus Yazma Girisimi";
+  flow:established,to_server;
+  modbus: access write;
+  classtype:policy-violation;
+  sid:1100001; rev:1;
+)
+
+# Kritik register alanına yazma engeli (Holding Register >= 100)
+drop tcp $SCADA_SERVERS any -> $PLC_IPS 502 (
+  msg:"OT-DPI: Kritik Holding Register Alanina Yetkisiz Yazma";
+  flow:established,to_server;
+  modbus: access write holding, address >=100;
+  classtype:bad-unknown;
+  sid:1100002; rev:1;
+)
+```
+
+### Wazuh SIEM Entegrasyonu — OT Alarm Örneği
+
+```xml
+<!-- /var/ossec/etc/rules/local_rules.xml -->
+<group name="ics,modbus,ot,">
+  <rule id="100200" level="12">
+    <if_sid>86601</if_sid>
+    <field name="alert.signature">Modbus</field>
+    <description>OT alarmi: Suricata yetkisiz/anormal Modbus fonksiyon kodu tespit etti.</description>
+    <mitre>
+      <id>T0855</id>
+    </mitre>
+  </rule>
+</group>
+```
+
+**Örnek SIEM log çıktısı (Modbus anomali):**
+
+```json
+{
+  "timestamp": "2026-06-20T14:23:45.123Z",
+  "protocol": "Modbus/TCP",
+  "src_ip": "192.168.10.45",
+  "dst_ip": "192.168.20.100",
+  "function_code": 15,
+  "address": 100,
+  "alert": "ANOMALY: Unauthorized write command from non-OT subnet",
+  "severity": "CRITICAL",
+  "mitre_technique": "T0831"
+}
+```
+
+---
+
+## §12.1.5. Güvenli Uzaktan Erişim Mimarisi
+
+SANS 2025 raporuna göre ICS/OT olaylarının yarısı uzaktan erişim yoluyla başlıyor. Colonial Pipeline (2021), MFA'sız eski bir VPN profili üzerinden ele geçirildi; 2015 Ukrayna saldırısı çalınan kimlik bilgileriyle SCADA'ya erişimle gerçekleşti. NIST SP 800-82 Rev. 3 Bölüm 5, uzaktan erişim için **broker'lı mimari, MFA, PAM ve oturum kaydı** kombinasyonunu zorunlu kontrol seti olarak tanımlar; IEC 62443 SR 1.1 (FR1) ile doğrudan örtüşür.
+
+**Asla doğrudan VPN/RDP ile OT'ye bağlanmayın.** Önerilen mimari:
+
+```
+Uzaktaki Kullanıcı → MFA (FIDO2/TOTP) → Kurumsal VPN → OT Erişim Portalı
+    → iDMZ Jump Host (oturum kaydı) → (Sadece yetkili protokoller) → OT Ağı (Seviye 2-3)
+```
+
+| Kontrol | Açıklama | Standart Eşlemesi |
+| :---- | :---- | :---- |
+| **MFA** | Her uzak oturumda zorunlu | NIST SP 800-53 IA-2, CIS Control 6 |
+| **PAM** | Oturum kaydı, zaman-sınırlı erişim, JIT yetki | IEC 62443 SR 1.1 |
+| **Jump Host** | iDMZ'de sıkılaştırılmış broker; dual-homed yasak | BİGR EKS güvenliği |
+| **RBAC** | Yalnızca ihtiyaç duyulan PLC/IP ve süre | Zero Trust least privilege |
+| **Legacy VPN imhası** | Kullanılmayan profiller derhal kaldırılmalı | Colonial Pipeline dersi |
+
+:::caution
+Jump host olarak yapılandırılan sunucuların hem IT hem OT ağlarına bağlı iki NIC'e (dual-homed) sahip olması kesinlikle yasaktır. Bu, güvenlik duvarlarını baypas ederek sistemi doğrudan köprü haline getirir.
+:::
+
+---
+
+## §12.1.6. Uluslararası Standartlar ve Türkiye Mevzuatı
+
+### Standart Eşleştirmesi
+
+| Standart | Kapsam | OT ile İlişkisi |
+| :---- | :---- | :---- |
+| **IEC 62443-2-1** | CSMS (güvenlik yönetim sistemi) | Politika, risk değerlendirme, tedarikçi güvenliği |
+| **IEC 62443-3-2** | Zone/conduit tasarımı | Risk analizi → zone haritası → SL-T ataması |
+| **IEC 62443-3-3** | Sistem SR gereksinimleri | FR1–FR7, SL-T doğrulama testleri |
+| **IEC 62443-4-2** | Bileşen SR gereksinimleri | PLC/HMI üretici güvenlik sertifikasyonu |
+| **NIST SP 800-82 Rev. 3** | OT güvenlik rehberi | Segmentasyon, izleme, IR uyarlaması, wireless |
+| **NIST SP 800-53 (OT overlay)** | Kontrol kataloğu | SC-7, AC-4, SI-4 OT'ye uyarlanmış uygulama |
+| **ISO/IEC 27001:2022** | BGYS | OT sistemlerini kapsayacak şekilde uyarlanır |
+| **ISO/IEC 27019** | Enerji sektörü | ISO 27001'in elektrik/gaz/su uyarlaması |
+| **CIS Controls v8** | Önceliklendirilmiş kontroller | Control 1 (envanter), 13 (izleme), 6 (erişim) |
+| **MITRE ATT&CK for ICS** | OT tehdit taksonomisi | T0822, T0883, T0855, T0831 |
+
+**NIST SP 800-82 Rev. 3 önerilen kontrol alanları (Bölüm 6 özet):**
+
+| Kontrol Alanı | NIST SP 800-82 Rev. 3 Odağı | IEC 62443 FR Eşlemesi |
+| :---- | :---- | :---- |
+| Ağ segmentasyonu | Purdue + DMZ + firewall | FR5 (Restricted Data Flow) |
+| Sistem sıkılaştırma | Varsayılan parola, servis kapatma | FR1, FR3 |
+| İzleme ve loglama | Pasif IDS, anomali tespiti | FR6 (Timely Response) |
+| Uzaktan erişim | MFA, PAM, jump host | FR1, FR2 |
+| Yama yönetimi | Risk-temelli, sanal yama | FR3, FR7 |
+| Olay müdahale | Proses güvenliği önceliği | FR6, CSMS sürekliliği |
+
+### Türkiye Yasal Bağlamı
+
+| Mevzuat | OT Yükümlülüğü |
+| :---- | :---- |
+| **BİGR (Cumhurbaşkanlığı Genelgesi 2019/12)** | EKS internete kapalı; zorunlu hallerde firewall, tünelleme, MFA |
+| **EPDK Siber Güvenlik Yetkinlik Modeli (RG 32213)** | Enerji sektörü EKS için Seviye 1/2/3 kontroller; yıllık denetim |
+| **5651 sayılı Kanun** | Logların 6 ay–2 yıl saklanması; zaman damgası zorunluluğu |
+| **KVKK (6698)** | Operatör logları, erişim kayıtları, CCTV → kişisel veri; 72 saat ihlal bildirimi |
+| **BDDK** | Bankacılık OT bileşenleri (enerji yönetimi, ATM altyapısı) için sızma testi/log |
+
+**5651–KVKK çelişki yönetimi:** 5651 "en az 6 ay sakla" derken KVKK "amacı kalmayan veriyi sil" der. Çözüm: 5651 logları yasal süre dolunca güvenli silme ile imha edilir; 5651 kapsamı KVKK m.5/2-a ve m.5/2-ç kapsamına girer.
+
+---
+
+## §12.1.7. MITRE ATT&CK for ICS ve Saldırı-Savunma Dengesi
+
+### İlgili Teknikler (Bölüm 12.1)
+
+| Taktik | Teknik | Karşı Önlem |
+| :---- | :---- | :---- |
+| Initial Access | T0822 External Remote Services | MFA, PAM, legacy VPN imhası |
+| Initial Access | T0883 Internet Accessible Device | Shodan taraması, port kapatma |
+| Initial Access | T0847 Removable Media | USB kontrolü, uygulama beyaz listesi |
+| Lateral Movement | Zone atlama | iDMZ, Purdue segmentasyonu |
+| Impact | T0831 Manipulation of Control | Pasif IDS, DPI, baseline anomali |
+
+### Senaryo: Spear-Phishing → PLC Manipülasyonu
+
+**Saldırı (ofansif):**
+1. OT mühendisine spear-phishing → Level 3 iş istasyonu ele geçirilir
+2. Mühendislik yazılımı üzerinden PLC'ye zararlı logic yüklenir
+3. Üretimde ani duruş veya güvensiz durum oluşur
+
+**Savunma (defansif):**
+1. E-posta gateway + XDR ile ilk erişim engellenir
+2. İş istasyonunda uygulama beyaz listesi + davranış analizi
+3. Pasif ağ izleme: Modbus write anomaly → SOC alarmı
+4. PLC'de signed firmware + logic CRC kontrolü
+5. Veri diyodu: IT'den OT'ye ters trafik imkansız
+6. Olay müdahale: "process safety first" — graceful shutdown
+
+---
+
+## §12.1.8. Mimari Tavsiyeler ve Özet
+
+Purdue Modeli OT ağlarını yapılandırmak için mükemmel bir **referans haritası** sunar; tek başına yeterli değildir. IEC 62443 Zone & Conduit ile risk bazlı uyarlanmalı, veri diyotları ve iDMZ ile tek yönlü veri akışı zorunlu hale getirilmelidir.
+
+**Uygulama yol haritası (0–12 ay):**
+
+| Aşama | Eylem | Eşik |
+| :---- | :---- | :---- |
+| **0–3 ay** | Pasif varlık keşfi; Purdue boşluk analizi | Seviye 0–3 varlıklarının %80+ envantere alınması |
+| **3–6 ay** | iDMZ tasarımı; varsayılan parola değişimi | IT→OT doğrudan bağlantı sayısı = 0 |
+| **6–12 ay** | Data diode (kritik akışlar); MFA + PAM + jump host | Tüm uzak erişimde MFA %100 |
+| **Sürekli** | OT telemetrisi SIEM entegrasyonu; yıllık tabletop | Yetkisiz engineering komutu tespit kuralı aktif |
+
+Endüstriyel protokoller varsayılan olarak güvensizdir; pasif+aktif izleme ve anomali tespiti şarttır. Uzaktan erişim her zaman broker'lı, MFA'lı ve kayıtlı olmalıdır. Bu mimari; kullanılabilirlik önceliğini korurken saldırı yüzeyini minimize eder, lateral movement'ı engeller ve hem uluslararası standartlara hem Türkiye kritik altyapı mevzuatına uyumu sağlar.
