@@ -187,7 +187,7 @@ Shadow AI'nin tespit edilmesini zorlaştıran temel faktörler:
 
 ### Çok Katmanlı Tespit Mimarisi
 
-Etkin Shadow AI tespiti için dört katman birlikte çalışmalıdır. Bu katmanların kuralları, [Detection Engineering ve Tehdit Avcılığı](../14-operasyonel-guvenlik/02-detection-engineering/) bölümünde (§14.2) anlatılan Sigma, Detection-as-Code ve SIEM korelasyon pratikleriyle üretim ortamına taşınır.
+Etkin Shadow AI tespiti için dört katman birlikte çalışmalıdır. Bu katmanların kuralları, [Detection Engineering ve Tehdit Avcılığı](../14-operasyonel-guvenlik/02-detection-engineering.md) bölümünde (§14.2) anlatılan Sigma, Detection-as-Code ve SIEM korelasyon pratikleriyle üretim ortamına taşınır.
 
 1. **Ağ katmanı:** DNS, proxy ve NetFlow loglarında AI domain ve API endpoint tespiti
 2. **Uç nokta katmanı:** Yüklü yazılım, tarayıcı eklentileri, yerel LLM süreçleri
@@ -303,7 +303,7 @@ index=endpoint (process_name="ollama*" OR process_name="local-ai*"
 
 ### Sigma Kuralları ve Detection-as-Code Entegrasyonu
 
-Aşağıdaki Sigma kuralları, [§14.2 Detection Engineering](../14-operasyonel-guvenlik/02-detection-engineering/) bölümünde anlatılan DaC repository yapısına `detections/ai/` alt dizini olarak eklenmeli; CI/CD pipeline'da `sigma check` ve pySigma dönüşümü ile Wazuh/Splunk/Sentinel'e otomatik dağıtılmalıdır.
+Aşağıdaki Sigma kuralları, [§14.2 Detection Engineering](../14-operasyonel-guvenlik/02-detection-engineering.md) bölümünde anlatılan DaC repository yapısına `detections/ai/` alt dizini olarak eklenmeli; CI/CD pipeline'da `sigma check` ve pySigma dönüşümü ile Wazuh/Splunk/Sentinel'e otomatik dağıtılmalıdır.
 
 ```yaml
 # Ollama yerel LLM servisi (Shadow AI)

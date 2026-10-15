@@ -445,6 +445,133 @@ RETURN u.name, u.serviceprincipalnames
 </rule>
 ```
 
+### §4.1.2.6. ITDR (Identity Threat Detection and Response) ve İleri Düzey AD Tehdit Avcılığı
+
+Geleneksel uç nokta tespit (EDR) ve ağ tespit (NDR) sistemleri, saldırganların zararlı yazılım kullanmadan doğrudan meşru kimlik bilgilerini ve dizin protokollerini kötüye kullandığı (Living off the Land — LotL) senaryolarda yetersiz kalır. **ITDR (Identity Threat Detection and Response)**, kimlik dokusunu (Active Directory, Entra ID, Okta, Ping Identity) proaktif ve reaktif olarak koruyan, kimlik tabanlı zafiyetleri ve yetki yükseltme yollarını analiz eden modern bir savunma disiplinidir.
+
+```mermaid
+flowchart TD
+    subgraph Saldırı Yüzeyi["Active Directory & Kimlik Yüzeyi"]
+        BH["BloodHound / SharpHound<br/>Graf Saldırı Yolları"]
+        KERB["Kerberoasting & AS-REP<br/>Hizmet Hesapları"]
+        SHAD["Shadow Credentials<br/>msDS-KeyCredentialLink"]
+        ADCS["AD CS ESC1-ESC8<br/>Sertifika Şablon İstismarı"]
+    end
+
+    subgraph ITDR Katmanı["ITDR & Savunma Katmanı"]
+        HONEY["Honeytoken / Tripwire SPN<br/>Erken Uyarı Tuzağı"]
+        AUDIT["Audit & Telemetri<br/>Event 4662, 4769, 5136"]
+        PPL["LSASS RunAsPPL &<br/>Credential Guard (VBS)"]
+        REVOKE["Otomatik İzolasyon &<br/>gMSA / LAPS Rotasyonu"]
+    end
+
+    BH --> AUDIT
+    KERB --> HONEY
+    SHAD --> AUDIT
+    ADCS --> AUDIT
+    AUDIT --> REVOKE
+    HONEY --> REVOKE
+```
+
+#### 1. BloodHound ile Gizli ACL Yetki Yükseltme Yollarının Tespiti
+
+Saldırganlar, belirgin grup üyelikleri (Domain Admins) yerine karmaşık Nesne Erişim Denetim Listeleri (DACL) üzerinden yanal hareket ve yetki yükseltme gerçekleştirir:
+
+| Gizli Yetki (ACE) | Saldırganın İstismar Mekanizması | Savunma & Düzeltme |
+| :--- | :--- | :--- |
+| **GenericAll / FullControl** | Hedef nesnenin tüm özniteliklerini değiştirme, parolayı sıfırlama veya gruba üye ekleme. | Yetkiyi kaldır; nesne sahipliğini Tier 0 grubuna sınırla. |
+| **WriteDacl** | Nesne DACL'ini değiştirerek saldırganın hesabına tam denetim (`FullControl`) verme hakkı. | AdminSDHolder ve hassas OU ACL'lerini en düşük ayrıcalıkla yapılandır. |
+| **WriteOwner** | Nesnenin sahipliğini (`TakeOwnership`) kendi üzerine alıp ardından DACL'i manipüle etme. | Sahip nesnelerini `Enterprise Admins` veya `Domain Admins` ile sınırla. |
+| **ForceChangePassword** | Kullanıcının mevcut parolasını bilmeksizin yeni parola atayarak hesabı ele geçirme. | Helpdesk hesaplarının Tier 0 hesapları üzerinde bu hakka sahip olmadığını doğrula. |
+| **GenericWrite** | `servicePrincipalName` veya `msDS-AllowedToDelegateTo` gibi hassas öznitelikleri yazabilme. | Nesne öznitelik yazma izinlerini kısıtla; Kerberos delegation'ı denetle. |
+
+**Operasyonel Cypher Analiz Tarifleri (BloodHound CE):**
+
+```cypher
+// 1. Tier 0 gruplarına giden tüm aktif saldırı yollarını listele
+MATCH (n:Base) WHERE n.system_tags CONTAINS "admin_tier_0"
+MATCH p=shortestPath((u:User {enabled: true})-[r:MemberOf|GenericAll|WriteDacl|WriteOwner*1..6]->(n))
+WHERE NOT u.system_tags CONTAINS "admin_tier_0"
+RETURN p LIMIT 50
+
+// 2. Tehlikeli ACL izinlerine sahip standart kullanıcıları bul
+MATCH (u:User)-[r:GenericAll|WriteDacl|WriteOwner|ForceChangePassword]->(target)
+WHERE NOT u.name STARTS WITH "ADMIN-"
+RETURN u.name, type(r), target.name
+
+// 3. Kısıtlanmamış Kerberos Delegasyonuna (Unconstrained Delegation) sahip bilgisayarları tespit et
+MATCH (c:Computer {unconstraineddelegation: true})
+WHERE NOT c.name CONTAINS "DC"
+RETURN c.name, c.operatingsystem
+```
+
+#### 2. Bal Küpü (Honeytoken) Hesapları ile Erken Uyarı
+
+Saldırganların keşif ve Kerberoasting faaliyetlerini anında yakalamak için üretim ortamına sahte, çekici hesaplar yerleştirilir:
+
+1. **Sahte SPN Tanımlı Hesap:** `MSSQLSvc_Reporting_Prod@CORP.LOCAL` adında, parolası 64+ karakterli karmaşık rastgele dizgiden oluşan, hiçbir meşru sistemin kullanmadığı bir servis hesabı oluşturulur.
+2. Bu hesaba bir SPN atanır: `setspn -A MSSQLSvc/db01.corp.local:1433 fake_honey_svc`.
+3. Herhangi bir kullanıcı veya süreç bu SPN için TGS bileti (Event ID 4769) talep ettiği anda %100 doğrulukla (sıfır yanlış pozitif) bir saldırganın Kerberoasting yaptığı anlaşılır ve kaynak host anında EDR ile karantinaya alınır.
+
+```powershell
+# Honeytoken hesabı oluşturma ve SPN atama (DEFANSİF)
+$HoneyPass = ConvertTo-SecureString -String (New-Guid).Guid -AsPlainText -Force
+New-ADUser -Name "SVC_Oracle_Analytics" `
+  -SamAccountName "svc_ora_analytics" `
+  -AccountPassword $HoneyPass `
+  -Description "Enterprise Analytics Service Account [CANARY]" `
+  -Enabled $true `
+  -PasswordNeverExpires $true
+
+# Çekici SPN kaydı ekle
+Set-ADUser -Identity "svc_ora_analytics" -ServicePrincipalNames @{Add='OracleDB/analytics.corp.local:1521'}
+```
+
+#### 3. Shadow Credentials (`msDS-KeyCredentialLink`) İstismarı ve Tespiti
+
+Windows Hello for Business (WHfB) desteği için tanıtılan `msDS-KeyCredentialLink` özniteliği, bir kullanıcının veya bilgisayar nesnesinin parolasını değiştirmeden, nesneye yeni bir X.509 genel anahtarı eklemeye izin verir. Hedef üzerinde `GenericWrite` veya `WriteProperty` hakkı olan saldırgan:
+
+1. Kendi ürettiği anahtar çiftinin genel anahtarını hedefin `msDS-KeyCredentialLink` alanına yazar (Whisker / Pywhisker).
+2. Bu anahtarla PKINIT üzerinden Kerberos TGT talep eder.
+3. Hedefin NTLM hash'ini (`U2U / S4U2self`) çekerek Pass-the-Hash yapar; parolanın değişmemesi sebebiyle saldırı fark edilmez.
+
+**Tespit:** Domain Controller üzerinde Event ID **5136** (Directory Service Object Modified) izlenmeli ve `AttributeLDAPDisplayName` değeri `msDS-KeyCredentialLink` olan işlemler filtrelenmelidir:
+
+```xml
+<!-- Wazuh — Shadow Credentials Değişiklik Tespiti (DEFANSİF) -->
+<rule id="100822" level="13">
+  <if_sid>60103</if_sid>
+  <field name="win.system.eventID">^5136$</field>
+  <field name="win.eventdata.attributeLDAPDisplayName">^msDS-KeyCredentialLink$</field>
+  <description>AD: msDS-KeyCredentialLink değiştirildi — Shadow Credentials saldırısı şüphesi (T1556)</description>
+  <mitre><id>T1556</id></mitre>
+  <group>active_directory,shadow_credentials,privilege_escalation,</group>
+</rule>
+```
+
+#### 4. Active Directory Certificate Services (AD CS) Tehditleri (ESC1–ESC8)
+
+Kurumsal PKI sistemleri (AD CS), yanlış yapılandırılmış sertifika şablonları nedeniyle en yaygın etki alanı ele geçirme yollarından biridir:
+
+- **ESC1 (Enrollee Supplies Subject):** Sertifika şablonunda `CT_FLAG_ENROLLEE_SUPPLIES_SUBJECT` bayrağı aktifse ve şablon `Client Authentication` EKU'su içeriyorsa, herhangi bir standart kullanıcı `Domain Administrator` adına sertifika talep edebilir ve bu sertifikayla Kerberos PKINIT üzerinden oturum açabilir.
+- **ESC8 (NTLM Relay to AD CS Web Enrollment):** AD CS'in HTTP tabanlı web kayıt arayüzünde (`certsrv`) NTLM authentication açıksa ve EPA (Extended Protection for Authentication) yoksa; saldırgan PetitPotam veya SpoolSample ile DC'yi tetikleyip DC makine hesabını AD CS'e relay ederek sahte sertifika üretebilir.
+
+**Sertleştirme:**
+- Sertifika şablonlarında `Supply in the request` seçeneğini devre dışı bırakın; `Build from Active Directory information` kullanın.
+- AD CS Web Enrollment servislerinde HTTP'yi tamamen kapatın veya EPA ve HTTPS zorunlu kılın.
+- `Certify.exe find /vulnerable` ile şablon zafiyetlerini düzenli tarayın.
+
+#### 5. LSASS Bellek Koruması ve Credential Guard
+
+Uç noktalarda Mimikatz gibi araçlarla bellekten kimlik bilgilerinin çalınmasını engellemek için iki zorunlu Windows kontrolü uygulanmalıdır:
+
+1. **LSA Protection (`RunAsPPL`):** LSASS sürecini Protected Process Light (PPL) olarak çalıştırır. Yönetici haklarına sahip saldırganlar bile kernel driver kullanmaksızın `OpenProcess` çağrısıyla LSASS belleğini okuyamaz:
+   ```cmd
+   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 1 /f
+   ```
+2. **Windows Defender Credential Guard (VBS):** Donanım sanallaştırmasını (Hyper-V) kullanarak NTLM hash'lerini ve Kerberos biletlerini izole bir sanal makinede (Virtual Secure Mode — VSM / `lsiso.exe`) tutar. Host işletim sisteminin kernel'ı ele geçirilse dahi VSM belleğine erişilemez.
+
+
 ### Standart Eşleştirmesi
 
 | ISO 27001:2022 | NIST SP 800-53 Rev. 5 | CIS Controls v8 | Operasyonel Karşılık |

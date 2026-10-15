@@ -137,7 +137,7 @@ ABD merkezli **NIST** (National Institute of Standards and Technology), bilgi te
 
 **ISC²** (International Information System Security Certification Consortium), bilgi güvenliği profesyonelleri için uluslararası geçerliliği olan sertifikalar sunan kar amacı gütmeyen bir kuruluştur. CISSP gibi sektörde saygın sertifikalarıyla tanınan ISC², bilgi güvenliği alanında standartları belirlemekte ve profesyonel gelişimi desteklemektedir. Etik kurallara bağlılık ve sürekli eğitim (CPE) gereklilikleriyle uzmanların yetkinliklerini güncel tutmayı amaçlar.
 
-![ISC² — bilgi güvenliği sertifikasyon konsorsiyumu](./ısc2.webp)
+![ISC² — bilgi güvenliği sertifikasyon konsorsiyumu](./isc2.webp)
 *ISC² — CISSP ve etik kurallar*
 
 #### OWASP
@@ -207,7 +207,7 @@ TÜBİTAK'a bağlı **BİLGEM** (Bilişim ve Bilgi Güvenliği İleri Teknolojil
 
 1971'de kurulan **TBD**, bilişim sektörünü geliştirmeyi amaçlayan ve bu alandaki paydaşları bir araya getiren köklü bir sivil toplum kuruluşudur. Bilgi teknolojileri, yazılım, siber güvenlik ve bilişim hukuku gibi alanlarda kamuoyu oluşturma, seminerler düzenleme ve kamu politikalarına katkı sağlama görevini üstlenir.
 
-![Türkiye Bilişim Derneği](./türkiye-bilisim-dernegi.webp)
+![Türkiye Bilişim Derneği](./turkiye-bilisim-dernegi.webp)
 *TBD — bilişim politikaları ve sektör koordinasyonu*
 
 ---

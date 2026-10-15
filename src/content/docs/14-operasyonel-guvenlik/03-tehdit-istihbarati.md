@@ -9,7 +9,7 @@ sidebar:
 
 Savunma derinliği (Defense in Depth) mimarisinde **Siber Tehdit İstihbaratı (Cyber Threat Intelligence — CTI)** ve **Aldatma Teknolojileri (Deception)**, reaktif güvenlik kontrollerini proaktif ve istihbarat odaklı bir yapıya dönüştüren stratejik katmanlardır. CTI, ham tehdit verilerini eyleme dönüştürülebilir istihbarata çevirir; aldatma teknolojileri ise saldırganları yanıltarak tekniklerini, araçlarını ve motivasyonlarını açığa çıkarır. Bu iki bileşen birlikte çalıştığında SOC'un "ne arayacağını" tanımlar, tespit kurallarını zenginleştirir ve saldırganı öngörülebilir yollara iter.
 
-Bu bölümde CTI yaşam döngüsü, IoC/IoA göstergeleri, STIX/TAXII paylaşım standartları, MITRE ATT&CK Navigator kapsama görselleştirmesi, honeypot/honeynet mimarileri, adversary emulation araçları ve kurumsal entegrasyon senaryoları — NIST, ISO 27001, CIS Controls, KVKK, 5651 ve BDDK çerçevesinde — inceleniyor. CTI'dan türetilen Sigma/YARA kurallarının üretim dağıtımı [§14.2 Detection Engineering](./02-detection-engineering/) bölümündeki Detection-as-Code pipeline'ı ile yapılır.
+Bu bölümde CTI yaşam döngüsü, IoC/IoA göstergeleri, STIX/TAXII paylaşım standartları, MITRE ATT&CK Navigator kapsama görselleştirmesi, honeypot/honeynet mimarileri, adversary emulation araçları ve kurumsal entegrasyon senaryoları — NIST, ISO 27001, CIS Controls, KVKK, 5651 ve BDDK çerçevesinde — inceleniyor. CTI'dan türetilen Sigma/YARA kurallarının üretim dağıtımı [§14.2 Detection Engineering](./02-detection-engineering.md) bölümündeki Detection-as-Code pipeline'ı ile yapılır.
 
 ---
 

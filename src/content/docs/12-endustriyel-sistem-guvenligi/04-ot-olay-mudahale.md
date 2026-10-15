@@ -2,15 +2,14 @@
 title: OT Sahasında Olay Müdahale (ICS Incident Response) ve Siber-Fiziksel Güvenlik
 sidebar:
   order: 4
-  label: 12.4  OT Sahasında Olay Müdahale (ICS Incident Response) ve Siber-Fiziksel
-    Güvenlik
+  label: "12.4  OT Sahasında Olay Müdahale (ICS Incident Response) ve Siber-Fiziksel Güvenlik"
 ---
 
 # OT Sahasında Olay Müdahale (ICS Incident Response) ve Siber-Fiziksel Güvenlik
 
 OT/ICS ortamlarında bir siber olay yalnızca veri kaybı veya sistem kesintisi anlamına gelmez; üretim duruşu, ekipman hasarı, çevre kirliliği ve insan can güvenliği tehdidi gibi fiziksel sonuçlar doğurabilir. NIST SP 800-82 Rev. 3, ICS için siber güvenlik kaygısının IT'den farklı olarak **güvenli bir sürecin sağlanması** üzerinde olduğunu vurgular.
 
-Bu bölüm; NIST SP 800-61 Rev. 3, NIST SP 800-82 Rev. 3, IEC 62443, IEC 61511, SANS Beş Kritik Kontrol, MITRE ATT&CK for ICS ve Türkiye mevzuatı (5651, KVKK, BİGR, EPDK) çerçevesinde tripping kriterleri, OT playbook'ları, ICS forensics ve siber-fiziksel güvenliği savunma derinliği perspektifinden inceler. IT tarafı olay müdahale yaşam döngüsü (PICERL, delil zinciri) [§14.4 Olay Müdahale](../14-operasyonel-guvenlik/04-olay-mudahale-ve-kriz-yonetimi/) bölümünde; OT tehdit izleme altyapısı **§12.3** bölümünde detaylandırılır.
+Bu bölüm; NIST SP 800-61 Rev. 3, NIST SP 800-82 Rev. 3, IEC 62443, IEC 61511, SANS Beş Kritik Kontrol, MITRE ATT&CK for ICS ve Türkiye mevzuatı (5651, KVKK, BİGR, EPDK) çerçevesinde tripping kriterleri, OT playbook'ları, ICS forensics ve siber-fiziksel güvenliği savunma derinliği perspektifinden inceler. IT tarafı olay müdahale yaşam döngüsü (PICERL, delil zinciri) [§14.4 Olay Müdahale](../14-operasyonel-guvenlik/04-olay-mudahale-ve-kriz-yonetimi.md) bölümünde; OT tehdit izleme altyapısı **§12.3** bölümünde detaylandırılır.
 
 :::caution
 **IEC 61511** (Functional Safety) kapsamındaki SIS/ESD sistemlerinde siber olay müdahalesi, IT IR playbook'larından ayrı tutulmalıdır. Yanlış tripping veya SIS bypass, siber riskten daha büyük fiziksel emniyet riski doğurur. OT IR kararlarında *Process Safety Engineer* ve *Operations Manager* onayı zorunludur.

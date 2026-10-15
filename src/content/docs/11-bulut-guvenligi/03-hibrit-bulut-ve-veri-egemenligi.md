@@ -9,7 +9,7 @@ sidebar:
 
 Kamu bulutu sağlayıcılarına (AWS, Azure, GCP) tam bağımlılık; veri egemenliği, yasal uyumluluk ve sınır ötesi veri transferi konularında ciddi riskler doğurur. CLOUD Act, FISA ve Schrems II sonrası AB-ABD veri aktarım kısıtlamaları, hyperscaler bağımlılığının yalnızca operasyonel değil yargısal bir risk taşıdığını göstermiştir. Özellikle KVKK, BDDK ve 5651 sayılı Kanun kurumları verilerini ve altyapılarını kontrol altında tutmaya zorlamaktadır.
 
-Bu bölüm, egemen altyapı (sovereign stack) tasarımı, Nextcloud ve açık kaynak alternatifleri, self-hosted güvenlik mimarisi ile Türk mevzuatının mimariye doğrudan etkilerini inceler. Konteyner ve IaC güvenliği [§11.2 Konteyner ve IaC](../02-konteyner-ve-iac-guvenligi/) bölümünde; yapay zeka veri egemenliği [§13.4 Gölge AI](../../13-yapay-zeka-guvenligi/04-veri-egemenligi-ve-golge-ai/) bölümünde derinleştirilir.
+Bu bölüm, egemen altyapı (sovereign stack) tasarımı, Nextcloud ve açık kaynak alternatifleri, self-hosted güvenlik mimarisi ile Türk mevzuatının mimariye doğrudan etkilerini inceler. Konteyner ve IaC güvenliği [§11.2 Konteyner ve IaC](./02-konteyner-ve-iac-guvenligi.md) bölümünde; yapay zeka veri egemenliği [§13.4 Gölge AI](../13-yapay-zeka-guvenligi/04-veri-egemenligi-ve-golge-ai.md) bölümünde derinleştirilir.
 
 | Mevzuat | Mimari Etki | Teknik Karşılık |
 | :---- | :---- | :---- |

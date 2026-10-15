@@ -236,10 +236,156 @@ checkov -d ./terraform --framework terraform --check HIGH,CRITICAL
 trivy config ./k8s/manifests/
 ```
 
-**Kyverno** admission controller ile imzalanmamış (`cosign verify`) container imajlarının cluster'a girmesi engellenir. CIS Controls v8 Safeguard 16.7 (hardening şablonları) ve 16.8 (üretim/üretim-dışı ayrımı) bu kontrollerle örtüşür.
+### SLSA v1.0 Çerçevesi ve Kriptografik Tedarik Zinciri Bütünlüğü
+
+Yazılım artifaktlarının (container imajları, binary dosyalar, kütüphaneler) kaynağından derleme anına kadar manipüle edilmediğini kanıtlamak için **SLSA (Supply-chain Levels for Software Artifacts) v1.0** standardı benimsenmelidir. SLSA, SolarWinds tarzı derleme ortamı zehirlenmelerine karşı artifaktın menşeini (provenance) şifreli olarak belgeler.
+
+```mermaid
+flowchart LR
+    subgraph Geliştirme["1. Kaynak Kod"]
+        Git["Git Commit<br/>Branch Protection + 2FA"]
+    end
+
+    subgraph Derleme["2. İzole Derleyici (SLSA L3)"]
+        Runner["Geçici (Ephemeral) Runner<br/>Hermetik Derleme"]
+        Fulcio["Sigstore Fulcio<br/>Kısa Ömürlü OIDC Sertifikası"]
+        Rekor["Sigstore Rekor<br/>Append-only Transparency Log"]
+    end
+
+    subgraph Artifakt["3. Paket & İmza"]
+        Image["Container İmajı"]
+        SBOM["Syft SBOM (CycloneDX)"]
+        Attest["in-toto Provenance"]
+    end
+
+    subgraph Dağıtım["4. Kubernetes Kümesi"]
+        Kyverno["Kyverno Admission Controller<br/>cosign verify + attest zorunlu"]
+        Pod["Çalışan Pod"]
+    end
+
+    Git --> Runner
+    Runner --> Fulcio
+    Fulcio --> Rekor
+    Runner --> Image
+    Runner --> SBOM
+    Runner --> Attest
+    Image --> Kyverno
+    Attest --> Kyverno
+    Kyverno -->|İmza Doğrulandı| Pod
+    Kyverno -.->|İmzasız / Geçersiz| Blok["DENY (Giriş Engellendi)"]
+```
+
+#### SLSA v1.0 Derleme Seviyeleri (Build Track)
+
+| Seviye | Tanım | Gereksinimler | Engellenen Tehdit |
+| :--- | :--- | :--- | :--- |
+| **Build L1** | Temel Menşe Kanıtı | Derleme sürecinin otomatik olması ve build platformu tarafından üretilen temel provenance belgesi. | Manuel hatalar, kayıtsız sürümler. |
+| **Build L2** | Kurcalamaya Dirençli | Barındırılan (hosted) derleme servisi; derleyicinin kendi kimliğiyle imzaladığı provenance; parametrelerin kullanıcı tarafından ezilememesi. | Geliştirici makinesinde sahte imaj üretip derlenmiş gibi gösterme. |
+| **Build L3** | Üst Düzey Güvenilirlik | **İzole ve geçici (ephemeral) ortamlar**: her derleme temiz bir VM/konteynerde başlar; **hermetik derleme**: derleme anında dış internet erişimi engellenir; yeniden üretilebilirlik (reproducible). | Derleme sunucusuna sızmış APT veya trojanlı derleyiciler (SUNSPOT / SolarWinds). |
+
+#### Sigstore Ekosistemi ve Parolasız (Keyless) İmzalama
+
+Geleneksel PGP ve statik özel anahtar tabanlı imzalama modellerinde anahtar sızıntısı ve anahtar yönetimi felaketle sonuçlanır. **Sigstore**, parolasız (keyless) imzalama paradigmasıyla bu sorunu çözer:
+
+1. **Fulcio:** Derleme motorunun OIDC kimliğini (örn. GitHub Actions `id-token`) doğrular ve yalnızca 10-15 dakika geçerli kısa ömürlü bir X.509 kod imzalama sertifikası üretir.
+2. **Cosign:** Kısa ömürlü özel anahtarla container imajını ve SBOM'u imzalar; ardından özel anahtarı bellekten siler.
+3. **Rekor:** İmzayı, sertifikayı ve hash değerini genel veya kurumsal özel şeffaflık günlüğüne (Merkle tree) yazar. İmzalanan artifaktın geçmişi geriye dönük silinemez veya değiştirilemez.
+
+```yaml
+# GitHub Actions — Cosign Keyless İmzalama ve SBOM Attestation
+name: Build and Sign Container
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write # Sigstore OIDC kimlik doğrulaması için zorunlu
+
+jobs:
+  build-and-sign:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # Commit SHA ile pinleme
+
+      - name: Cosign Kurulumu
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da
+
+      - name: Syft Kurulumu (SBOM Üretici)
+        uses: anchore/sbom-action/download-syft@f325610c9f50a54015d37c8d16cb3b0e2c8f4de0
+
+      - name: Container Build & Push
+        id: build
+        run: |
+          IMAGE_URI="ghcr.io/${{ github.repository }}:${{ github.ref_name }}"
+          docker build -t "$IMAGE_URI" .
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push "$IMAGE_URI"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_URI")
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Keyless Container İmzalama
+        run: |
+          cosign sign --yes "${{ steps.build.outputs.digest }}"
+
+      - name: SBOM Üret ve Attest Et (in-toto)
+        run: |
+          syft "${{ steps.build.outputs.digest }}" -o cyclonedx-json > sbom.json
+          cosign attest --yes --type cyclonedx --predicate sbom.json "${{ steps.build.outputs.digest }}"
+```
+
+#### Kubernetes Kümesinde Kyverno ile İmza ve SBOM Doğrulama
+
+Kümeye deploy edilecek container imajlarının doğrulanması için **Kyverno** Admission Controller kullanılır:
+
+```yaml
+# Kyverno ClusterPolicy — İmzalı İmaj ve SBOM Zorunluluğu (DEFANSİF)
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: check-image-signatures
+  annotations:
+    pod-policies.kyverno.io/autogen-controllers: DaemonSet,Deployment,Job,StatefulSet
+spec:
+  validationFailureAction: Enforce
+  webhookTimeoutSeconds: 30
+  rules:
+    - name: verify-sigstore-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      verifyImages:
+        - imageReferences:
+            - "ghcr.io/kurum-repo/*"
+          attestors:
+            - entries:
+                - keyless:
+                    issuer: "https://token.actions.githubusercontent.com"
+                    subject: "https://github.com/kurum-repo/*"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"
+          attestations:
+            - type: https://cyclonedx.org/schema
+              conditions:
+                - all:
+                    - key: "{{ regex_match('^1\\.[4-6]$', schemaVersion) }}"
+                      operator: Equals
+                      value: true
+```
+
+#### CI/CD Boru Hattı Zehirlenmesi (Pipeline Poisoning) Savunmaları
+
+Saldırganların CI/CD altyapılarına yönelik yöntemlerine karşı şu katı kontroller uygulanmalıdır:
+
+1. **Bağımlılık Karışıklığı (Dependency Confusion):** Dahili kurumsal paket isimleri (örn. `@sirket/auth-lib`), açık npm veya PyPI sunucularına saldırganlar tarafından daha yüksek sürüm numarasıyla yüklenerek kurumsal derleyicilerin harici zararlı paketi çekmesi sağlanır. **Savunma:** Scoped namespace kullanımı (`@sirket/`), dahili artifact repository'de (Nexus, Artifactory) harici proxy kurallarının kısıtlanması.
+2. **Değişmez Action Pinning:** GitHub Action'larında `@v4` gibi hareketli git tag'leri yerine doğrudan 40 karakterlik **Commit SHA** kullanılmalıdır (`uses: actions/checkout@11bd71...`). Tag manipülasyonu ile bir üçüncü parti action ele geçirilse dahi pipeline zehirlenemez.
+3. **Geçici ve İzole Runner:** Runner ortamları her derleme sonrası imha edilmeli; derleme sürecinin host Docker socket'ine (`/var/run/docker.sock`) erişimi engellenmelidir.
 
 :::caution
-SLSA ve SBOM, koddaki kötü niyetli ekleri tespit etmez; yalnızca artifaktın kökenini kanıtlar. İkisi birlikte kullanılmalıdır.
+SLSA ve SBOM, koddaki mantıksal açıkları değil, artifaktın derleme zincirindeki bütünlüğünü kanıtlar. SAST/DAST/SCA analizleri ile SLSA kriptografik imzalama mekanizmaları birlikte konuşlandırılmalıdır.
 :::
 
 ---

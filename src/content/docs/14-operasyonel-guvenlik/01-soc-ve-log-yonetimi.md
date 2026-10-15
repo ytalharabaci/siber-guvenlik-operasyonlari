@@ -9,7 +9,7 @@ sidebar:
 
 Operasyonel güvenlik, savunma derinliği mimarisinin **görünürlük ve müdahale** katmanıdır. Kurumsal altyapılarda ağ erişilebilirliği (NOC) ile siber tehdit tespiti (SOC) geleneksel olarak ayrı silolarda yönetilir; bu ayrım, "performans anomalisi mi, saldırı mı?" sorusunun geç yanıtlanmasına, alarm yorgunluğuna ve MTTR'nin uzamasına yol açar. Modern mimarilerde SIEM merkezi korelasyon motoru, UEBA davranışsal analitik katmanı ve SOAR otomasyon orkestrasyonu — NOC ve SOC'un ISOC (Integrated Security and Operations Center) çatısı altında birleşmesiyle — tek bir operasyonel gerçeklik kaynağı oluşturur.
 
-Bu bölümde log toplama (Syslog, WEF/WEC), ayrıştırma, zenginleştirme, UEBA, veri katmanlama (Hot/Warm/Cold/Frozen), SOAR playbook'ları ve Türkiye mevzuatı (5651, KVKK, BDDK) ışığında uçtan uca bir SOC/SIEM mimarisi kuruluyor. Tespit kuralı geliştirme ve tehdit avcılığı için [§14.2 Detection Engineering](./02-detection-engineering/); olay müdahale playbook'ları için [§14.4 Olay Müdahale](./04-olay-mudahale-ve-kriz-yonetimi/) bölümlerine bakın.
+Bu bölümde log toplama (Syslog, WEF/WEC), ayrıştırma, zenginleştirme, UEBA, veri katmanlama (Hot/Warm/Cold/Frozen), SOAR playbook'ları ve Türkiye mevzuatı (5651, KVKK, BDDK) ışığında uçtan uca bir SOC/SIEM mimarisi kuruluyor. Tespit kuralı geliştirme ve tehdit avcılığı için [§14.2 Detection Engineering](./02-detection-engineering.md); olay müdahale playbook'ları için [§14.4 Olay Müdahale](./04-olay-mudahale-ve-kriz-yonetimi.md) bölümlerine bakın.
 
 ```mermaid
 flowchart LR

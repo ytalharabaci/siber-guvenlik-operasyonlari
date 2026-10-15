@@ -11,7 +11,7 @@ Siber güvenlik olayları, günümüz kurumları için artık "olası" değil, "
 
 Olay müdahale, Savunma Derinliği (Defense in Depth) mimarisinin **Respond** ve **Recover** katmanlarını operasyonel olarak hayata geçiren kritik yetenektir. Hazırlık aşaması Protect/Detect katmanlarıyla iç içe geçerken; tespit, sınırlandırma, yok etme, kurtarma ve ders çıkarma süreçleri, merkezi SOC/SIEM/SOAR bileşenleri, uç nokta ajanları (EDR/XDR), ağ sensörleri (NDR) ve yalıtılmış forensics ortamları üzerinden koordine edilir. IR yalnızca reaktif bir "yangın söndürme" değil; proaktif risk azaltma, delil bütünlüğü sağlama, yasal yükümlülükleri yerine getirme ve sürekli iyileştirme mekanizmasıdır.
 
-Nisan 2025'te yayımlanan **NIST SP 800-61 Revizyon 3**, olay müdahalesini bağımsız bir operasyonel süreç olmaktan çıkarıp **NIST Siber Güvenlik Çerçevesi (CSF) 2.0** ile hizalı kurumsal siber risk yönetiminin temel unsuru haline getiriyor. Bu bölümde PICERL yaşam döngüsü, playbook mühendisliği, Blue/Red/Purple Team metodolojileri, ISO/IEC 27037 uyumlu delil zinciri, KAPE/Velociraptor araçları, SOC metrikleri, tabletop tatbikatları ve Türkiye mevzuatı (KVKK, 7545, BDDK, 5651) bütüncül bir mimari perspektiften inceleniyor. Olay tespiti ve triyaj altyapısı için [§14.1 SOC ve Log Yönetimi](./01-soc-ve-log-yonetimi/); OT/ICS olay müdahale farkları için [§12.4 OT Olay Müdahale](../12-endustriyel-sistem-guvenligi/04-ot-olay-mudahale/) bölümlerine bakın.
+Nisan 2025'te yayımlanan **NIST SP 800-61 Revizyon 3**, olay müdahalesini bağımsız bir operasyonel süreç olmaktan çıkarıp **NIST Siber Güvenlik Çerçevesi (CSF) 2.0** ile hizalı kurumsal siber risk yönetiminin temel unsuru haline getiriyor. Bu bölümde PICERL yaşam döngüsü, playbook mühendisliği, Blue/Red/Purple Team metodolojileri, ISO/IEC 27037 uyumlu delil zinciri, KAPE/Velociraptor araçları, SOC metrikleri, tabletop tatbikatları ve Türkiye mevzuatı (KVKK, 7545, BDDK, 5651) bütüncül bir mimari perspektiften inceleniyor. Olay tespiti ve triyaj altyapısı için [§14.1 SOC ve Log Yönetimi](./01-soc-ve-log-yonetimi.md); OT/ICS olay müdahale farkları için [§12.4 OT Olay Müdahale](../12-endustriyel-sistem-guvenligi/04-ot-olay-mudahale.md) bölümlerine bakın.
 
 ```mermaid
 flowchart TD
@@ -156,55 +156,85 @@ MITRE ATT&CK çerçevesi, tehdit aktörlerinin saldırı zincirinin farklı aşa
 2. **Tespit ve müdahale eşlemesi:** Her teknik için tespit yöntemleri ve müdahale prosedürleri tanımlanır
 3. **Önceliklendirme:** Tespit edilen tekniklere göre playbook'lar önceliklendirilir
 
-### Örnek Playbook: Ransomware Yanıtı
+### §14.4.3.1. Operasyonel Fidye Yazılımı (Ransomware) Olay Müdahale Playbook'u
 
-```yaml
-playbook: ransomware_response
-version: 2.1
-trigger:
-  - file_encryption_alert
-  - ransomware_note_detected
-  - production_outage_with_extortion_demand
+Fidye yazılımları, günümüzde çift (Double Extortion) ve üçlü (Triple Extortion: şifreleme + veri sızıntısı + DDoS/müşteri tacizi) şantaj taktikleriyle kurumların varlığını tehdit eden en yıkıcı siber olay türüdür. Bu playbook, ilk şifreleme uyarısından yasal bildirimlere kadar dakikası dakikasına yürütülmesi gereken operasyonel adımları tanımlar.
 
-roles:
-  incident_commander: soc_manager
-  technical_lead: senior_ir_analyst
-  comms_lead: pr_manager
-  legal_counsel: compliance_officer
+```mermaid
+flowchart TD
+    subgraph Faz1["T+0 - 15 dk: Acil Sınırlandırma"]
+        A1["EDR Host İzolasyonu<br/>(Network Quarantine)"]
+        A2["Hipervizör vNIC Detach<br/>(VM RAM Suspend / Snapshot)"]
+        A3["SMB/RPC Blokajı<br/>(TCP 445 / 135 Segmentasyon)"]
+    end
 
-phases:
-  identification:
-    actions:
-      - confirm_encryption_activity
-      - identify_ground_zero_host
-      - determine_ransomware_family
-    attck_techniques: [T1486, T1490]
+    subgraph Faz2["T+15 - 60 dk: Sızıntı & AD Koruma"]
+        B1["Egress Flow Kesimi<br/>(Mega/Rclone/Tor Sızıntı Engeli)"]
+        B2["VSS & Yedek Koruması<br/>(Air-Gapped / Immutable Kilit)"]
+        B3["Tier 0 Hesap Dondurma<br/>(krbtgt & Domain Admin Karantinası)"]
+    end
 
-  containment:
-    immediate:
-      - isolate_ground_zero_host
-      - block_iocs_at_firewall
-      - disable_compromised_accounts
-    attck_techniques: [T1485]
+    subgraph Faz3["T+1 - 4 saat: DFIR Triyajı"]
+        C1["Uçucu Bellek Alma<br/>(WinPmem / DumpIt RAM Dökümü)"]
+        C2["KAPE / Velociraptor Triage<br/>(MFT, Prefetch, Event Log)"]
+        C3["Ground Zero Tespiti<br/>(İlk Giriş Noktası & Zafiyet)"]
+    end
 
-  eradication:
-    actions:
-      - remove_persistence_mechanisms
-      - patch_exploited_vulnerabilities
-      - reset_compromised_credentials
+    subgraph Faz4["T+4 - 24 saat: Temiz Oda & Kurtarma"]
+        D1["Clean Room Doğrulaması<br/>(İzole Sandbox'ta Yedek Testi)"]
+        D2["krbtgt Çift Döndürme<br/>(Golden Ticket Geçersiz Kılma)"]
+        D3["Değişmez (WORM) Yedekten Dönüş"]
+    end
 
-  recovery:
-    actions:
-      - restore_from_clean_backups
-      - validate_system_integrity
-      - monitor_recovery_enhanced
+    subgraph Faz5["T+24 - 72 saat: Yasal Bildirim & Kriz"]
+        E1["KVKK 72 Saat Bildirimi<br/>(ihlalbildirim.kvkk.gov.tr)"]
+        E2["USOM / SOME Raporlama<br/>(7545 Sayılı Kanun Uyarınca)"]
+        E3["Kriz İletişimi & Adli Rapor"]
+    end
 
-post_incident:
-  - conduct_post_mortem
-  - update_playbook
-  - notify_regulatory_bodies
-  - share_iocs_with_cti_platform
+    A1 --> A2 --> A3 --> B1 --> B2 --> B3 --> C1 --> C2 --> C3 --> D1 --> D2 --> D3 --> E1 --> E2 --> E3
 ```
+
+#### Aşama 1: T+0 – T+15 Dakika (İlk Müdahale ve Yayılımın Kesilmesi)
+
+1. **EDR Seviyesinde İzolasyon:** Şifreleme davranışı (T1486) veya toplu dosya adı uzantısı değişikliği tespit edilen tüm uç noktalar EDR konsolu üzerinden anında ağ izolasyonuna (Network Quarantine) alınır.
+2. **Hipervizör Seviyesinde Sanal Kart Bağlantısını Kesme:** EDR ajanının çalışmadığı veya saldırgan tarafından devre dışı bırakıldığı sanal sunucularda (vSphere/ESXi, Hyper-V, Proxmox):
+   - **ASLA sunucu gücü kapatılmamalıdır (Power Off / Reset yapılmaz);** aksi halde bellekteki şifreleme anahtarları silinir.
+   - Doğrudan sanal makinenin bellek durumuyla birlikte snapshot'ı alınır (`Snapshot with Memory`) veya `Suspend` durumuna getirilir.
+   - Sanal ağ kartının (`vNIC`) bağlantısı sanal switch seviyesinde kaldırılır (`Connected: False`).
+3. **Lateral Movement Portlarının Kapatılması:** Çekirdek güvenlik duvarında ve switch'lerde VLAN'lar arası SMB (TCP 445), RPC (TCP 135), WMI ve WinRM (TCP 5985/5986) trafiği geçici olarak acil durum kuralıyla bloklanır.
+
+#### Aşama 2: T+15 – T+60 Dakika (Çift Şantaj Tespiti ve Kimlik Koruması)
+
+1. **Veri Sızıntısının (Exfiltration) Engellenmesi:** Saldırganlar şifreleme öncesinde gigabaytlarca veriyi dışarı sızdırır. Güvenlik duvarı ve NDR üzerinde:
+   - Mega.nz, Dropbox, Wasabi, Google Drive, Backblaze gibi bulut depolama IP'leri engellenir.
+   - `rclone`, `megasync`, `filezilla`, `curl`, `7z` süreçlerinin giden yüksek bant genişliği tüketimleri incelenir ve sonlandırılır.
+2. **Yedekleme Altyapısının Yalıtımı:**
+   - Yedekleme sunucularının (Veeam, Commvault vb.) yönetim arayüzleri ve depolama havuzları (NAS/SAN/S3 WORM) ağdan fiziki veya mantıksal olarak ayrılır.
+   - Volume Shadow Copy (VSS) silinme girişimleri (`vssadmin delete shadows /all /quiet`, `wmic shadowcopy delete`) denetlenir.
+3. **Active Directory Karantinası:** Şüpheli etki alanı hesapları devre dışı bırakılır; şüpheli PowerShell veya WMI oturumları sonlandırılır.
+
+#### Aşama 3: T+1 Saat – T+4 Saat (Adli Analiz ve Giriş Noktası Tespiti)
+
+1. **Uçucu Bellek ve Artefakt Koleksiyonu:**
+   - Şifreleme süreci devam eden veya yeni biten kurban sistemlerden `WinPmem` veya `DumpIt` ile RAM imajı alınır (kriptografik simetrik anahtarların RAM'den kurtarılabilmesi ihtimali için).
+   - KAPE ile `$MFT`, `$LogFile`, `$UsnJrnl`, Prefetch, Shimcache, Amcache ve Windows Event Logları dakikalar içinde toplanır.
+2. **İlk Giriş Noktası (Patient Zero / Ground Zero):**
+   - VPN / SSL-VPN oturum logları incelenir (MFA fatigue veya ele geçirilmiş kullanıcı adı/parola).
+   - Dışa açık sistemlerdeki CVE istismarları taranır (FortiOS, Citrix NetScaler ADC, MS Exchange vb.).
+   - İlk şifrelenen dosyanın sahibi ve `$MFT` oluşturulma zaman damgası geriye dönük takip edilerek ilk enfekte olan makine saptanır.
+
+#### Aşama 4: T+4 Saat – T+24 Saat (Temiz Oda Kurtarması ve Kimlik Sıfırlama)
+
+1. **Temiz Oda (Clean Room Environment):** Üretim ağına doğrudan dönüş yapılmaz. Yalıtılmış bir VLAN'da temiz hipervizör ayağa kaldırılır.
+2. **Değişmez (Immutable) Yedek Doğrulaması:** WORM (Write Once, Read Many) korumalı veya hava boşluklu (Air-gapped) yedeklerin SHA-256 hash bütünlüğü doğrulanır. Yedek sanal makine izole ağda başlatılır ve EDR/AV ile taranır.
+3. **KRBTGT ve Tier 0 Parola Sıfırlama:** Active Directory Domain Controller'ların temiz imajları devreye alınmadan önce `KRBTGT` hesabı **iki kez** arka arkaya sıfırlanır (aktif Golden Ticket'ların tümü geçersiz kılınır). Tüm domain admin parolaları yenilenir.
+
+#### Aşama 5: T+24 Saat – T+72 Saat (Yasal Bildirimler ve Kriz Yönetimi)
+
+1. **KVKK 72 Saat Bildirimi:** 6698 sayılı Kanun uyarınca, veri sorumlusu ihlali öğrendiği andan itibaren en geç 72 saat içinde Kişisel Verileri Koruma Kurulu'na `ihlalbildirim.kvkk.gov.tr` üzerinden ön bildirimde bulunmak zorundadır.
+2. **USOM ve SOME Raporlaması:** 7545 sayılı Kanun ve ilgili mevzuat uyarınca teknik göstergeler (IOC'ler, C2 IP'leri, ransomware hash'leri) USOM'a gecikmeksizin iletilir.
+3. **Fidye Politikası:** Kurumsal ve yasal çerçevede fidye ödenmesi kesinlikle tavsiye edilmez; OFAC yaptırımları ve terörün finansmanı mevzuatına aykırılık riski taşır ve saldırganların anahtarı teslim edeceğinin hiçbir garantisi yoktur.
 
 ### Playbook Yaşam Döngüsü
 
