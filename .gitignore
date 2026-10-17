@@ -27,3 +27,10 @@ _archive/
 
 # Geçici veri dizini
 .data/
+
+# Yerel çalışma notları ve LLM üretim talimatları (yayınlanmaz)
+prompt.md
+yapı.md
+birleştirme
+bolumler.md
+ICERIK-ANALIZI.md
