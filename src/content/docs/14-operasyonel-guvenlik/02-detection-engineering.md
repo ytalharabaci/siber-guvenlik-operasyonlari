@@ -4,7 +4,6 @@ sidebar:
   order: 2
   label: 14.2  Detection Engineering ve Tehdit Avcılığı
 ---
-
 # Detection Engineering ve Tehdit Avcılığı (Threat Hunting)
 
 Detection Engineering (Tespit Mühendisliği) ve Threat Hunting (Tehdit Avcılığı), savunmanın pasif alarm bekleyişinden proaktif arayışa evrildiği iki tamamlayıcı disiplindir. Detection Engineering, "bilineni yakalayan" sistematik tespit mekanizmalarının geliştirilmesi, test edilmesi ve bakımıdır; Threat Hunting ise otomasyonun kaçırdığı gizli tehditleri hipotez-güdümlü olarak arar. NIST Cybersecurity Framework 2.0 **Detect** fonksiyonu (DE.AE, DE.CM, DE.DP) bu iki disiplinin operasyonel omurgasını oluşturur.
@@ -27,7 +26,7 @@ flowchart LR
 ```
 
 <details>
-<summary>Detection-as-Code pipeline aşamaları (kaynak sentezi)</summary>
+<summary>Detection-as-Code pipeline aşamaları /summary>
 
 1. **Lint:** `sigma check ./rules/` — YAML syntax ve şema doğrulama. 2. **Historical dry-run:** Son 30 günlük veriye karşı false positive oranı hesaplama. 3. **Emulation:** Atomic Red Team / Caldera ile TTP replay. 4. **Environment tagging:** `production`, `audit-only`, `high-risk`. 5. **Deploy:** pySigma → Splunk/Wazuh/QRadar dönüşümü + API dağıtımı. Wazuh Ruleset-as-Code: `/var/ossec/etc/rules` Git versiyonlama + GitHub Actions otomatik deploy. NIST SP 800-53 **CM-2/CM-3** ve BDDK denetlenebilirlik gereksinimleriyle doğrudan örtüşür.
 
